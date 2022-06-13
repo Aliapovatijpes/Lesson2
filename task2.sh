@@ -4,17 +4,16 @@ set -e
 # Help                                                     #
 ############################################################
 Help()
-{
+{  
    # Display Help
-   echo "Add description of the script functions here."
-   echo
-   echo "Syntax: scriptTemplate [-g|h|v|V]"
+   echo "Syntax: task02.sh [-a|h|m|p|]"
    echo "options:"
-   echo "g     Print the GPL license notification."
-   echo "h     Print this Help."
-   echo "v     Verbose mode."
-   echo "V     Print software version and exit."
-   echo
+   echo "a  ip adress defining from what adress user can have access (default=localhost)"
+   echo "h            Print this Help."
+   echo "m            optionally install Apache, PHP, PHPMyAdmin"
+   echo "p  password  defines password for user. Password is created from random symbols, if not used"
+   echo "r  password  defines password for root. Default password = rootpass"
+   echo "u  username  defines username for MySQL user. Default username = username"
    exit 1
 }
 
@@ -50,12 +49,13 @@ GRANT ALL PRIVILEGES ON * . * TO "$username"@"$useraccessIP";
 FLUSH PRIVILEGES;
 EOF
 echo "MySQL was configured succesfully"
+MySQLport=$(mysql -u root --password=rootpass -e "SHOW VARIABLES LIKE 'port';" | grep -o '[[:digit:]]*')
 }
 ############################################################
 #Load MySQL dump   if database "devops" exists             #
 ############################################################
 loadMySQLdump(){
-if `mysql -u root --password=rootpass  -e "SHOW DATABASES" | grep -q  -w  devops`;
+if `mysql -u root --password=rootpass  -e "SHOW DATABASES" | grep -q -w  devops`;
 then
     echo "$RESULT database was founded"
     mysql -u root --password="$rootpass" devops < devops.sql
@@ -69,9 +69,10 @@ fi
 }
 
 ############################################################
-# Apache server and PHP MyAdmin installation function      #
+# Apache server, PHP and PHP MyAdmin installation function #
 ############################################################
 ApacheAndPHPMyAdminInstall(){
+PHPMyAdminPort=80
 wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz
 tar xvf phpMyAdmin-*-all-languages.tar.gz
 sudo mv phpMyAdmin-*-all-languages /usr/share/phpMyAdmin
@@ -109,7 +110,6 @@ sed -i "$ a \ \n \$cfg['Servers'][$i]['central_columns'] = 'pma__central_columns
 sed -i "$ a \ \n \$cfg['Servers'][$i]['designer_settings'] = 'pma__designer_settings';   " /usr/share/phpMyAdmin/config.inc.php
 sed -i "$ a \ \n \$cfg['Servers'][$i]['export_templates'] = 'pma__export_templates'; " /usr/share/phpMyAdmin/config.inc.php
 
-
 sudo mysql < /usr/share/phpMyAdmin/sql/create_tables.sql -u root --password="$rootpass"
 sudo mysql -u root --password="$rootpass" <<EOF
 CREATE USER 'pma'@'localhost' IDENTIFIED BY 'pmapass';
@@ -121,6 +121,13 @@ sudo touch /etc/apache2/sites-available/phpmyadmin.conf
 
 PHP_MY_ADMIN_CONF_CONTENT=$(
   cat <<-END
+<VirtualHost *:$PHPMyAdminPort>
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+
 Alias /phpmyadmin /usr/share/phpMyAdmin
 
 <Directory /usr/share/phpMyAdmin/>
@@ -171,6 +178,9 @@ CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'password';
 GRANT ALL PRIVILEGES ON app_db.* TO 'app_user'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
+echo "Apache, PHP and PHPMyAdmin was installed succesfully"
+PHPMyAdminPort=$(grep -w "VirtualHost" /etc/apache2/sites-available/phpmyadmin.conf | grep -o '[[:digit:]]*')
+echo "PHPMyAdmin connection port is $PHPMyAdminPort"
 }
 
 ############################################################
@@ -205,6 +215,11 @@ while getopts ":a:hu:p:r:m" option; do
          exit;;
  esac
 done
+if ! grep -q -i 'bullseye' /etc/os-release
+then 
+echo "This script must be run only on Debian 11 (bullseye) system"
+exit 1
+fi
 sudo apt-get update
 installMySQL
 configureMySQL
@@ -213,9 +228,11 @@ if [ $MyAdminFlag -eq 1 ]
 then
 ApacheAndPHPMyAdminInstall
 fi
-
+echo "MySQL connection port is $MySQLport"
+echo "IP adress of the system is $(hostname -I)"
 echo "username is $username"
 echo "user password is $userpass"
 echo "root password is $rootpass"
 echo "user have permission to connect from $useraccessIP"
 
+exit 0

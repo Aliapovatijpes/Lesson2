@@ -4,7 +4,7 @@
 This repository contains script and SQL file,  
 which are used for automatic installing and configuring of MySQL server,  
 Apache2 server, PHP and PHP MyAdmin  
-The script and SQL file should be in te same folder  
+The script and SQL file should be in the same folder  
 The script is written for Debian 11 system  
 
 ## Help for script using  
@@ -13,4 +13,4 @@ The script is written for Debian 11 system
 -m             optionally  install Apache, PHP, PHPMyAdmin  
 -p  password   defines password for user. Password is created from random symbols, if not used  
 -r  password   defines password for root. Default password = rootpass  
--u  username   defines username for MySQL user. Default username = user  
+-u  username   defines username for MySQL user. Default username = username  

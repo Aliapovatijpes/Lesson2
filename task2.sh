@@ -49,7 +49,6 @@ GRANT ALL PRIVILEGES ON * . * TO "$username"@"$useraccessIP";
 FLUSH PRIVILEGES;
 EOF
 echo "MySQL was configured succesfully"
-MySQLport=$(mysql -u root --password=rootpass -e "SHOW VARIABLES LIKE 'port';" | grep -o '[[:digit:]]*')
 }
 ############################################################
 #Load MySQL dump   if database "devops" exists             #
@@ -84,31 +83,30 @@ blowfish_pass=$(head -c 300 /dev/urandom | tr -dc A-Za-z0-9=+*/.,- | head -c32)
 OLD_BLOW_FISH_CONF="\['blowfish_secret'\] = '';"
 NEW_BLOW_FISH_CONF="\['blowfish_secret'\] = '$blowfish_pass';"
 sudo sed -i "s|$OLD_BLOW_FISH_CONF|$NEW_BLOW_FISH_CONF|g" /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['blowfish_secret'] = '$blowfish_pass'; /* YOU MUST FILL IN THIS FOR COOKIE AUTH! */  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['controlhost'] = 'localhost'; " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['controluser'] = 'pma'; " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['controlpass'] = 'pmapass';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['pmadb'] = 'phpmyadmin';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['pmadb'] = 'phpmyadmin';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['bookmarktable'] = 'pma__bookmark';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['relation'] = 'pma__relation'; " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['table_info'] = 'pma__table_info';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['table_coords'] = 'pma__table_coords';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['pdf_pages'] = 'pma__pdf_pages';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['column_info'] = 'pma__column_info'; " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['history'] = 'pma__history'; " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['table_uiprefs'] = 'pma__table_uiprefs';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['tracking'] = 'pma__tracking';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['userconfig'] = 'pma__userconfig';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['recent'] = 'pma__recent'; " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['favorite'] = 'pma__favorite';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['users'] = 'pma__users';   " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['usergroups'] = 'pma__usergroups';   " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['navigationhiding'] = 'pma__navigationhiding';   " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['savedsearches'] = 'pma__savedsearches';   " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['central_columns'] = 'pma__central_columns';   " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['designer_settings'] = 'pma__designer_settings';   " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][$i]['export_templates'] = 'pma__export_templates'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['controlhost'] = 'localhost'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['controluser'] = 'pma'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['controlpass'] = 'pmapass';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['pmadb'] = 'phpmyadmin';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['pmadb'] = 'phpmyadmin';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['bookmarktable'] = 'pma__bookmark';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['relation'] = 'pma__relation'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['table_info'] = 'pma__table_info';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['table_coords'] = 'pma__table_coords';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['pdf_pages'] = 'pma__pdf_pages';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['column_info'] = 'pma__column_info'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['history'] = 'pma__history'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['table_uiprefs'] = 'pma__table_uiprefs';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['tracking'] = 'pma__tracking';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['userconfig'] = 'pma__userconfig';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['recent'] = 'pma__recent'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['favorite'] = 'pma__favorite';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['users'] = 'pma__users';   " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['usergroups'] = 'pma__usergroups';   " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['navigationhiding'] = 'pma__navigationhiding';   " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['savedsearches'] = 'pma__savedsearches';   " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['central_columns'] = 'pma__central_columns';   " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['designer_settings'] = 'pma__designer_settings';   " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['export_templates'] = 'pma__export_templates'; " /usr/share/phpMyAdmin/config.inc.php
 
 sudo mysql < /usr/share/phpMyAdmin/sql/create_tables.sql -u root --password="$rootpass"
 sudo mysql -u root --password="$rootpass" <<EOF
@@ -228,7 +226,7 @@ if [ $MyAdminFlag -eq 1 ]
 then
 ApacheAndPHPMyAdminInstall
 fi
-echo "MySQL connection port is $MySQLport"
+echo "MySQL connection port is 3306"
 echo "IP adress of the system is $(hostname -I)"
 echo "username is $username"
 echo "user password is $userpass"

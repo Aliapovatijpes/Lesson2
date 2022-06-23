@@ -6,13 +6,14 @@ set -e
 Help()
 {  
    # Display Help
-   echo "Syntax: task02.sh [-a|h|m|p|]"
+   echo "Syntax: task02.sh [-a|h|m|p|s]"
    echo "options:"
-   echo "a  ip adress defining from what adress user can have access (default=localhost)"
+   echo "a  ip adress defining from what adress user can have access to MySQL server (default=localhost)"
    echo "h            Print this Help."
-   echo "m            optionally install Apache, PHP, PHPMyAdmin"
+   echo "m  ip adress optionally install Apache, PHP, PHPMyAdmin with connection to MySQL on defined IP (default=localhost)"
    echo "p  password  defines password for user. Password is created from random symbols, if not used"
    echo "r  password  defines password for root. Default password = rootpass"
+   echo "s            optionally install MySQL server"
    echo "u  username  defines username for MySQL user. Default username = username"
    exit 1
 }
@@ -25,11 +26,13 @@ installMySQL()
 {
 echo "Installing MySQL"
 export DEBIAN_FRONTEND=noninteractive
-wget -c https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb
+sudo apt-get install -y gnupg
+sudo wget -c https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb
 sudo -E dpkg -i mysql-apt-config_0.8.22-1_all.deb
 sudo apt update
 sudo -E apt install -y mysql-server
-rm mysql-apt-config_0.8.22-1_all.deb
+sudo rm mysql-apt-config_0.8.22-1_all.deb
+sudo systemctl restart mysql
 echo "MySQL was installed succesfully"
 }
 
@@ -41,13 +44,19 @@ echo "Configuring MySQL"
 sudo mysql <<EOF
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password by "$rootpass";
 DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-CREATE USER "$username"@"$useraccessIP" IDENTIFIED BY "$userpass";
-GRANT ALL PRIVILEGES ON * . * TO "$username"@"$useraccessIP";
+CREATE USER "$username"@"$useraccessIP" IDENTIFIED BY '$userpass';
+GRANT ALL PRIVILEGES ON *.* TO "$username"@"$useraccessIP";
 FLUSH PRIVILEGES;
 EOF
+
+sudo mysql -u root --password="$rootpass"<<EOF
+CREATE USER 'pma'@'$useraccessIP' IDENTIFIED BY 'pmapassnew';
+GRANT ALL PRIVILEGES ON phpmyadmin.* TO 'pma'@'$useraccessIP' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+EOF
+
 echo "MySQL was configured succesfully"
 }
 ############################################################
@@ -83,11 +92,12 @@ blowfish_pass=$(head -c 300 /dev/urandom | tr -dc A-Za-z0-9=+*/.,- | head -c32)
 OLD_BLOW_FISH_CONF="\['blowfish_secret'\] = '';"
 NEW_BLOW_FISH_CONF="\['blowfish_secret'\] = '$blowfish_pass';"
 sudo sed -i "s|$OLD_BLOW_FISH_CONF|$NEW_BLOW_FISH_CONF|g" /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][\$i]['controlhost'] = 'localhost'; " /usr/share/phpMyAdmin/config.inc.php
+sudo sed -i "s|\['host'\] = 'localhost'|\['host'\] = '$MySQLIP'|g" /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['Servers'] = '$MySQLIP'; " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['controlhost'] = '$MySQLIP'; " /usr/share/phpMyAdmin/config.inc.php
 sed -i "$ a \ \n \$cfg['Servers'][\$i]['controluser'] = 'pma'; " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][\$i]['controlpass'] = 'pmapass';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][\$i]['pmadb'] = 'phpmyadmin';  " /usr/share/phpMyAdmin/config.inc.php
-sed -i "$ a \ \n \$cfg['Servers'][\$i]['pmadb'] = 'phpmyadmin';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['controlpass'] = 'pmapassnew';  " /usr/share/phpMyAdmin/config.inc.php
+sed -i "$ a \ \n \$cfg['Servers'][\$i]['pmadb'] = 'null';  " /usr/share/phpMyAdmin/config.inc.php
 sed -i "$ a \ \n \$cfg['Servers'][\$i]['bookmarktable'] = 'pma__bookmark';  " /usr/share/phpMyAdmin/config.inc.php
 sed -i "$ a \ \n \$cfg['Servers'][\$i]['relation'] = 'pma__relation'; " /usr/share/phpMyAdmin/config.inc.php
 sed -i "$ a \ \n \$cfg['Servers'][\$i]['table_info'] = 'pma__table_info';  " /usr/share/phpMyAdmin/config.inc.php
@@ -108,12 +118,6 @@ sed -i "$ a \ \n \$cfg['Servers'][\$i]['central_columns'] = 'pma__central_column
 sed -i "$ a \ \n \$cfg['Servers'][\$i]['designer_settings'] = 'pma__designer_settings';   " /usr/share/phpMyAdmin/config.inc.php
 sed -i "$ a \ \n \$cfg['Servers'][\$i]['export_templates'] = 'pma__export_templates'; " /usr/share/phpMyAdmin/config.inc.php
 
-sudo mysql < /usr/share/phpMyAdmin/sql/create_tables.sql -u root --password="$rootpass"
-sudo mysql -u root --password="$rootpass" <<EOF
-CREATE USER 'pma'@'localhost' IDENTIFIED BY 'pmapass';
-GRANT ALL PRIVILEGES ON phpmyadmin.* TO 'pma'@'localhost' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-EOF
 
 sudo touch /etc/apache2/sites-available/phpmyadmin.conf
 
@@ -170,12 +174,6 @@ sudo mkdir /usr/share/phpMyAdmin/tmp
 sudo chmod 777 /usr/share/phpMyAdmin/tmp
 sudo chown -R www-data:www-data /usr/share/phpMyAdmin
 sudo systemctl restart apache2
-sudo mysql -u root --password="$rootpass" <<EOF
-CREATE DATABASE app_db;
-CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'password';
-GRANT ALL PRIVILEGES ON app_db.* TO 'app_user'@'localhost' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-EOF
 echo "Apache, PHP and PHPMyAdmin was installed succesfully"
 PHPMyAdminPort=$(grep -w "VirtualHost" /etc/apache2/sites-available/phpmyadmin.conf | grep -o '[[:digit:]]*')
 echo "PHPMyAdmin connection port is $PHPMyAdminPort"
@@ -190,11 +188,12 @@ echo "PHPMyAdmin connection port is $PHPMyAdminPort"
 userpass=$(head -c 100 /dev/urandom | tr -dc A-Za-z0-9 | head -c6)
 username="username"
 useraccessIP="localhost"
+MySQLIP="localhost"
 rootpass="rootpass"
 MyAdminFlag=0
+MySQLFlag=0
 
-
-while getopts ":a:hu:p:r:m" option; do
+while getopts ":a:hu:p:r:m:s" option; do
    case $option in
       h) # display Help
          Help;;
@@ -204,8 +203,11 @@ while getopts ":a:hu:p:r:m" option; do
          userpass=${OPTARG};;
       r) #reading password for MySQL root user
          rootpass=${OPTARG};;
+	  s) #install MySQL
+	     MySQLFlag=1;;
       m) #install PHP My Admin
-         MyAdminFlag=1;;
+         MyAdminFlag=1
+		 MySQLIP=${OPTARG};;
       a) #  defining from where user can have access
           useraccessIP=${OPTARG};;
      \?) # Invalid option
@@ -219,18 +221,24 @@ echo "This script must be run only on Debian 11 (bullseye) system"
 exit 1
 fi
 sudo apt-get update
+if [ $MySQLFlag -eq 1 ]
+then
 installMySQL
 configureMySQL
 loadMySQLdump
-if [ $MyAdminFlag -eq 1 ]
-then
-ApacheAndPHPMyAdminInstall
-fi
-echo "MySQL connection port is 3306"
-echo "IP adress of the system is $(hostname -I)"
 echo "username is $username"
 echo "user password is $userpass"
 echo "root password is $rootpass"
 echo "user have permission to connect from $useraccessIP"
+echo "MySQL connection port is 3306"
+fi
+if [ $MyAdminFlag -eq 1 ]
+then
+ApacheAndPHPMyAdminInstall
+fi
+
+
+echo "IP adress of the system is $(hostname -I)"
+
 
 exit 0
